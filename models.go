@@ -72,9 +72,11 @@ type Device struct {
 
 // ServerRoute represents a route attached to a server.
 type ServerRoute struct {
-	Network string `json:"network"`
-	NAT     bool   `json:"nat,omitempty"`
-	NetGateway bool `json:"net_gateway,omitempty"`
+	Network      string `json:"network"`
+	NAT          bool   `json:"nat,omitempty"`
+	NATInterface string `json:"nat_interface,omitempty"`
+	NetGateway   bool   `json:"net_gateway,omitempty"`
+	Metric       int    `json:"metric,omitempty"`
 }
 
 // Server represents a Pritunl VPN server.
