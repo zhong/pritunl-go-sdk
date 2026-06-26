@@ -87,3 +87,23 @@ func (c *Client) AddRoute(serverID string, route ServerRoute) error {
 func (c *Client) DeleteRoute(serverID, network string) error {
 	return c.Delete("/server/"+serverID+"/route/"+network, nil)
 }
+
+// ListRoutes returns all routes for a server.
+// This gets the routes from the server detail endpoint.
+func (c *Client) ListRoutes(serverID string) ([]ServerRoute, error) {
+	server, err := c.GetServer(serverID)
+	if err != nil {
+		return nil, err
+	}
+	return server.Routes, nil
+}
+
+// GetServerRoutes fetches routes directly from the /server/{id}/route endpoint.
+// This is the preferred method if GetServer doesn't include routes.
+func (c *Client) GetServerRoutes(serverID string) ([]ServerRoute, error) {
+	var routes []ServerRoute
+	if err := c.Get("/server/"+serverID+"/route", &routes); err != nil {
+		return nil, err
+	}
+	return routes, nil
+}
