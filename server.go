@@ -1,6 +1,9 @@
 package pritunl
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+)
 
 // CreateServerRequest is the payload for creating a server.
 type CreateServerRequest struct {
@@ -85,7 +88,9 @@ func (c *Client) AddRoute(serverID string, route ServerRoute) error {
 
 // DeleteRoute deletes a route from a server.
 func (c *Client) DeleteRoute(serverID, network string) error {
-	return c.Delete("/server/"+serverID+"/route/"+network, nil)
+	// URL encode the network parameter since it contains slashes
+	encodedNetwork := url.QueryEscape(network)
+	return c.Delete("/server/"+serverID+"/route/"+encodedNetwork, nil)
 }
 
 // ListRoutes returns all routes for a server.
