@@ -12,7 +12,7 @@
 ## 安装
 
 ```bash
-go get github.com/example/pritunl-go-sdk
+go get github.com/zhong/pritunl-go-sdk
 ```
 
 ## 快速开始
@@ -24,7 +24,7 @@ import (
     "fmt"
     "log"
 
-    pritunl "github.com/example/pritunl-go-sdk"
+    pritunl "github.com/zhong/pritunl-go-sdk"
 )
 
 func main() {

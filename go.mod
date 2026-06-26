@@ -1,3 +1,3 @@
-module github.com/example/pritunl-go-sdk
+module github.com/zhong/pritunl-go-sdk
 
 go 1.26.4

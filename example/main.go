@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	pritunl "github.com/example/pritunl-go-sdk"
+	pritunl "github.com/zhong/pritunl-go-sdk"
 )
 
 func main() {
