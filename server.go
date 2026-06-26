@@ -98,16 +98,27 @@ func (c *Client) DeleteRoute(serverID, network string) error {
 		return nil
 	}
 
-	// If DELETE fails with 404, try alternative approach
-	// Get the current routes using the dedicated endpoint
+	// If DELETE fails with 404, try alternative: maybe Pritunl expects PUT with empty body
+	fmt.Printf("[SDK] DELETE failed with: %v\n", deleteErr)
+	fmt.Printf("[SDK] Trying PUT method as alternative...\n")
+
+	putErr := c.Put("/server/"+serverID+"/route/"+encodedNetwork, nil, nil)
+	if putErr == nil {
+		return nil
+	}
+	fmt.Printf("[SDK] PUT also failed with: %v\n", putErr)
+
+	// If both DELETE and PUT fail, return the original DELETE error
+	return deleteErr
+}
+
+// DeleteRouteAlternative tries alternative methods to delete a route
+// This is for testing different API approaches
+func (c *Client) DeleteRouteAlternative(serverID, network string) error {
+	// Get all routes
 	routes, err := c.GetServerRoutes(serverID)
 	if err != nil {
-		// Fall back to GetServer if GetServerRoutes fails
-		server, err2 := c.GetServer(serverID)
-		if err2 != nil {
-			return fmt.Errorf("get server: %w", err2)
-		}
-		routes = server.Routes
+		return fmt.Errorf("get routes: %w", err)
 	}
 
 	// Find and remove the route
@@ -125,9 +136,23 @@ func (c *Client) DeleteRoute(serverID, network string) error {
 		return fmt.Errorf("route %s not found", network)
 	}
 
-	// The DELETE endpoint should work if the route exists
-	// Return the original DELETE error since we can't update routes directly
-	return deleteErr
+	// Try updating the server with the new routes list via PUT
+	// This assumes the API supports updating routes via the server PUT endpoint
+	fmt.Printf("[SDK] Trying to update server routes list via PUT...\n")
+
+	// Build a request that only includes the routes field
+	type RoutesUpdate struct {
+		Routes []ServerRoute `json:"routes"`
+	}
+
+	routesUpdate := RoutesUpdate{Routes: newRoutes}
+	err = c.Put("/server/"+serverID, routesUpdate, nil)
+	if err == nil {
+		return nil
+	}
+
+	fmt.Printf("[SDK] Server PUT also failed with: %v\n", err)
+	return fmt.Errorf("all deletion methods failed")
 }
 
 // ListRoutes returns all routes for a server.
