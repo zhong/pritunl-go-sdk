@@ -112,47 +112,43 @@ func (c *Client) DeleteRoute(serverID, network string) error {
 	return deleteErr
 }
 
-// DeleteRouteAlternative tries alternative methods to delete a route
-// This is for testing different API approaches
-func (c *Client) DeleteRouteAlternative(serverID, network string) error {
-	// Get all routes
-	routes, err := c.GetServerRoutes(serverID)
-	if err != nil {
-		return fmt.Errorf("get routes: %w", err)
-	}
-
-	// Find and remove the route
-	var newRoutes []ServerRoute
-	found := false
-	for _, r := range routes {
-		if r.Network != network {
-			newRoutes = append(newRoutes, r)
-		} else {
-			found = true
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("route %s not found", network)
-	}
-
-	// Try updating the server with the new routes list via PUT
-	// This assumes the API supports updating routes via the server PUT endpoint
-	fmt.Printf("[SDK] Trying to update server routes list via PUT...\n")
-
-	// Build a request that only includes the routes field
-	type RoutesUpdate struct {
+// ReplaceRoutes replaces all routes on a server with a new set.
+// This deletes all existing routes and adds the new ones.
+func (c *Client) ReplaceRoutes(serverID string, newRoutes []ServerRoute) error {
+	// First, try to update the server with the new routes list
+	// This is the most direct approach - send PUT with the new routes
+	type ServerRoutesUpdate struct {
 		Routes []ServerRoute `json:"routes"`
 	}
 
-	routesUpdate := RoutesUpdate{Routes: newRoutes}
-	err = c.Put("/server/"+serverID, routesUpdate, nil)
+	updateReq := ServerRoutesUpdate{Routes: newRoutes}
+	err := c.Put("/server/"+serverID, updateReq, nil)
+
 	if err == nil {
 		return nil
 	}
 
-	fmt.Printf("[SDK] Server PUT also failed with: %v\n", err)
-	return fmt.Errorf("all deletion methods failed")
+	// If direct update fails, try alternative: clear first, then add
+	// Get current routes
+	currentRoutes, err := c.GetServerRoutes(serverID)
+	if err != nil {
+		return fmt.Errorf("get current routes: %w", err)
+	}
+
+	// Delete old routes one by one
+	for _, route := range currentRoutes {
+		encodedNetwork := url.QueryEscape(route.Network)
+		_ = c.Delete("/server/"+serverID+"/route/"+encodedNetwork, nil)
+	}
+
+	// Add new routes
+	for _, route := range newRoutes {
+		if err := c.AddRoute(serverID, route); err != nil {
+			return fmt.Errorf("add route %s: %w", route.Network, err)
+		}
+	}
+
+	return nil
 }
 
 // ListRoutes returns all routes for a server.
