@@ -87,10 +87,47 @@ func (c *Client) AddRoute(serverID string, route ServerRoute) error {
 }
 
 // DeleteRoute deletes a route from a server.
+// Pritunl social edition API behavior for route deletion.
 func (c *Client) DeleteRoute(serverID, network string) error {
-	// URL encode the network parameter since it contains slashes
+	// Try standard DELETE first
 	encodedNetwork := url.QueryEscape(network)
-	return c.Delete("/server/"+serverID+"/route/"+encodedNetwork, nil)
+	deleteErr := c.Delete("/server/"+serverID+"/route/"+encodedNetwork, nil)
+
+	// If successful, return
+	if deleteErr == nil {
+		return nil
+	}
+
+	// If DELETE fails with 404, try alternative approach
+	// Get the current routes using the dedicated endpoint
+	routes, err := c.GetServerRoutes(serverID)
+	if err != nil {
+		// Fall back to GetServer if GetServerRoutes fails
+		server, err2 := c.GetServer(serverID)
+		if err2 != nil {
+			return fmt.Errorf("get server: %w", err2)
+		}
+		routes = server.Routes
+	}
+
+	// Find and remove the route
+	var newRoutes []ServerRoute
+	found := false
+	for _, r := range routes {
+		if r.Network != network {
+			newRoutes = append(newRoutes, r)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("route %s not found", network)
+	}
+
+	// The DELETE endpoint should work if the route exists
+	// Return the original DELETE error since we can't update routes directly
+	return deleteErr
 }
 
 // ListRoutes returns all routes for a server.
